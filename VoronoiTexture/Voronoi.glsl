@@ -1,3 +1,9 @@
+
+//----------------------------------------
+// Hash Function
+// Hash_xD_to_yD ; input x dimention vector, output y dimention vector
+// Hash_xD_to_yD_m; output -1 ~ 1
+
 float Hash_1D_to_1D(float k){
     return fract(sin(k * 104.2)*84252.01313);
 }
@@ -60,7 +66,33 @@ vec3 Hash_3D_to_3D(vec3 k){
     vec3 st = vec3(dot(k,vec3(103,393,293)),dot(k,vec3(593,339,299)),dot(k,vec3(523,334,192)));
     return vec3(fract(sin(st) * 2304.2002));
 }
+//----------------------------------------
 
+//----------------------------------------
+//Function of Distance
+//refer to https://qiita.com/7CIT/items/4126d23ffb1b28b80f27
+//Euclidean Distance
+#define Euclidean(p) length(p)
+
+//Manhattan Distance 
+float Manhattan2D(vec2 p){ return abs(p.x) + abs(p.y);}
+float Manhattan3D(vec3 p){ return abs(p.x) + abs(p.y) + abs(p.z);}
+float Manhattan4D(vec4 p){ return abs(p.x) + abs(p.y) + abs(p.z) + abs(p.w);}
+
+//Chebyshev Distance 
+float Checyshev2D(vec2 p){return max(abs(p.x),abs(p.y));}
+float Checyshev3D(vec3 p){return max(max(abs(p.x),abs(p.y)),abs(p.z));}
+float Checyshev4D(vec4 p){return max(max(max(abs(p.x),abs(p.y)),abs(p.z)),abs(p.w));}
+
+//Minkowski Distance
+float Minkowski2D(vec2 k,float p){vec2 k1 = pow(abs(k),vec2(p));return pow(dot(k1,vec2(1)),1.0 / p);}
+float Minkowski3D(vec3 k,float p){vec3 k1 = pow(abs(k),vec3(p));return pow(dot(k1,vec3(1)),1.0 / p);}
+float Minkowski4D(vec4 k,float p){vec4 k1 = pow(abs(k),vec4(p));return pow(dot(k1,vec4(1)),1.0 / p);}
+
+//----------------------------------------
+//Voronoi 
+//refer to Blender sourcecode 
+//
 vec3 texture_2D(vec2 uv){
     return Hash_2D_to_1D(uv) * vec3(1.0);
 }
