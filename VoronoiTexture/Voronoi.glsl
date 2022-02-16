@@ -5,7 +5,7 @@
 // Hash_xD_to_yD_m; output -1 ~ 1
 
 float Hash_1D_to_1D(float k){
-    return fract(sin(k * 104.2)*84252.01313);
+    return fract(sin(k * 104.2) * 84252.01313);
 }
 float Hash_1D_to_1D_m(float k){
     return -1.0 + 2.0 * fract(sin(k * 104.2)*84252.01313);
@@ -159,7 +159,7 @@ void voronoi_f1_1d(float w,float expornent,float randomness,int MetricMode, inou
     //一個前のcell、今いる場所のcell、一個後のcellで距離を計算する。
     for(int i = -1; i <= 1 ; i++){
         float cellOffset = float(i);
-        float pointPosition = cellOffset + Hash_1D_to_1D(cellOffset * cellPosition) * randomness;
+        float pointPosition = cellOffset + Hash_1D_to_1D(cellOffset + cellPosition) * randomness;
         float distanceToPoint = voronoi_distance_1d(pointPosition,localPosition,MetricMode,expornent);
 
         //比較
@@ -227,23 +227,71 @@ void voronoi_f1_2d(vec2 coord,float expornent,float randomness,int MetricMode,in
     outPosition = targetPosition + cellPosition;
 }
 
+//F2 
+void voronoi_f2_2d(vec2 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec2 outPosition) {
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+
+//最も近い点(F1)と二番目に近い点(F2)それぞれ判定用に用意する 
+    float distF1 = 8.0f;
+    float distF2 = 8.0f;
+
+    vec2 offsetF1 = vec2(0);
+    vec2 offsetF2 = vec2(0);
+    vec2 positionF1 = vec2(0);
+    vec2 positionF2 = vec2(0);
+
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = voronoi_distance_2d(pointPosition,localPosition,MetricMode,expornent);
+            
+            //最近点を発見した場合
+            if(distanceToPoint < distF1){
+                //F1に格納される点はF2に移す
+                distF2 = distF1;
+                positionF2 = positionF1;
+                offsetF2 = offsetF1;
+
+                //F1の更新
+                distF1 = distanceToPoint;
+                positionF1 = pointPosition;
+                offsetF1 = cellOffset;
+            }
+            //二番目に近い点を発見した場合
+            else if(distanceToPoint < distF2){
+                distF2 = distanceToPoint;
+                positionF2 = pointPosition;
+                offsetF2 = cellOffset; 
+            }
+        }
+    }
+
+    outDistace = distF2;
+    outColor = Hash_2D_to_3D(cellPosition + offsetF2);
+    outPosition = positionF2 + cellPosition;
+}
+
+//Edge
+
 //----------------------------------------
 //Main Function
 vec3 texture_2D(vec2 uv){
     float dist;
     vec3 col;
     vec2 pos;
-    float randomness = sin(iTime);
+    float randomness = 1.0;
     int MetricMode = EUCLIDEAN;
-    float expornent = 2.0;
-    voronoi_f1_2d(uv,expornent,randomness,MetricMode,dist,col,pos);
-    return dist * vec3(1.0);
+    float expornent =0.3;
+    voronoi_f2_2d(uv,expornent,randomness,MetricMode,dist,col,pos);
+    return dist * vec3(1);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 { 
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     vec3 col = vec3(0.0);
-    col = texture_2D(uv * 10.); 
+    col = texture_2D(uv * 10.0); 
     fragColor = vec4(col,0.0);
 }
