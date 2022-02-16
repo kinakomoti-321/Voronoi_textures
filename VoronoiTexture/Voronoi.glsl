@@ -90,12 +90,66 @@ float Minkowski2D(vec2 k,float p){vec2 k1 = pow(abs(k),vec2(p));return pow(dot(k
 float Minkowski3D(vec3 k,float p){vec3 k1 = pow(abs(k),vec3(p));return pow(dot(k1,vec3(1)),1.0 / p);}
 float Minkowski4D(vec4 k,float p){vec4 k1 = pow(abs(k),vec4(p));return pow(dot(k1,vec4(1)),1.0 / p);}
 
+
 //----------------------------------------
 //Voronoi 
 
 //reference 
 //Blender sourcecode https://github.com/blender/blender/blob/594f47ecd2d5367ca936cf6fc6ec8168c2b360d0/intern/cycles/kernel/svm/svm_voronoi.h
 //Blender document 
+
+/*
+Dimensions : the dimension of Voronoi Texture
+- 1D
+- 2D
+- 3D
+- 4D
+*/
+
+/*
+Feature : define what ouput of Voronoi Texture to take
+- F1                return color and position of and distance to nearest point
+output : 
+
+- F2                return color and position of and distance to second nearest point
+output :
+
+- Smooth F1         return smoothed output of F1
+output :
+
+- Distance to Edge  return distance to the nearest Edge of Voronoi cell
+output :
+
+- N-Sphere Radius   return  
+output :
+
+*/
+/*
+Distance metric : define Distance Metric in Voronoi Texture
+- Euclidean
+- Manhattan
+- Checyshev
+- Minkowski
+*/
+
+//Metric Mode
+#define EUCLIDEAN 1
+#define MANHATTAN 2
+#define CHECYSHEV 3
+#define MINKOWSKI 4
+
+//----
+//1D voronoi
+//---- 
+
+//１次元では距離の取り方は１つだけ
+float voronoi_distance_1d(float a,float b,int MetricMode,float expornent){
+    return abs(b - a);
+}
+
+void voronoi_f1_1d
+//----------------------------------------
+//Main Function
 vec3 texture_2D(vec2 uv){
     return Hash_2D_to_1D(uv) * vec3(1.0);
 }
