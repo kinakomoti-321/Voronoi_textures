@@ -109,19 +109,20 @@ Dimensions : the dimension of Voronoi Texture
 /*
 Feature : define what ouput of Voronoi Texture to take
 - F1                return color and position of and distance to nearest point
-output : 
+input: 
+output : distance,cell color,cell position
 
 - F2                return color and position of and distance to second nearest point
-output :
+output : distance,cell color,cell position
 
 - Smooth F1         return smoothed output of F1
-output :
+output : distance,cell color,cell position
 
 - Distance to Edge  return distance to the nearest Edge of Voronoi cell
-output :
+output : distance
 
-- N-Sphere Radius   return  
-output :
+- N-Sphere Radius   return radius of the circle inscribed voronoi cell
+output : radius
 
 */
 /*
@@ -147,17 +148,102 @@ float voronoi_distance_1d(float a,float b,int MetricMode,float expornent){
     return abs(b - a);
 }
 
-void voronoi_f1_1d
+void voronoi_f1_1d(float w,float expornent,float randomness,int MetricMode, inout float outDistance,inout vec3 outColor,float outW){
+    float cellPosition = floor(w);
+    float localPosition = w - cellPosition;
+
+    float minDistance = 8.0;
+    float targetOffset = 0.0;
+    float targetPosition = 0.0;
+
+    //一個前のcell、今いる場所のcell、一個後のcellで距離を計算する。
+    for(int i = -1; i <= 1 ; i++){
+        float cellOffset = float(i);
+        float pointPosition = cellOffset + Hash_1D_to_1D(cellOffset * cellPosition) * randomness;
+        float distanceToPoint = voronoi_distance_1d(pointPosition,localPosition,MetricMode,expornent);
+
+        //比較
+        if(distanceToPoint < minDistance){
+            targetOffset = cellOffset;
+            minDistance = distanceToPoint;
+            targetPosition = pointPosition;
+        }
+    }
+
+    outDistance = minDistance;
+    //最も近いポイントのインデックスで色を付ける
+    outColor = Hash_1D_to_3D(cellPosition + targetOffset);
+
+    outW = targetPosition + cellPosition;
+}
+
+//----
+//2D voronoi
+//---- 
+
+//２次元以上は距離の取り方に種類が付けられる
+float voronoi_distance_2d(vec2 a,vec2 b,int MetricMode,float expornent){
+    if(MetricMode == EUCLIDEAN){
+        return Euclidean(b - a);
+    }
+    else if(MetricMode == MANHATTAN){
+        return Manhattan2D(b - a);
+    }
+    else if(MetricMode == CHECYSHEV){
+        return Checyshev2D(b - a);
+    }
+    else if(MetricMode == MINKOWSKI){
+        return Minkowski2D(b-a,expornent);
+    }
+    else{
+        return 0.0;
+    }
+}
+
+//F1
+void voronoi_f1_2d(vec2 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec2 outPosition) {
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+    
+    float minDistance = 8.0f;
+    vec2 targetOffset = vec2(0);
+    vec2 targetPosition = vec2(0);    
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+            
+            float distanceToPoint = voronoi_distance_2d(pointPosition,localPosition,MetricMode,expornent);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                targetOffset = cellOffset;
+                targetPosition = pointPosition;
+            }
+        }
+    }
+
+    outDistace = minDistance;
+    outColor = Hash_2D_to_3D(cellPosition + targetOffset);
+    outPosition = targetPosition + cellPosition;
+}
+
 //----------------------------------------
 //Main Function
 vec3 texture_2D(vec2 uv){
-    return Hash_2D_to_1D(uv) * vec3(1.0);
+    float dist;
+    vec3 col;
+    vec2 pos;
+    float randomness = sin(iTime);
+    int MetricMode = EUCLIDEAN;
+    float expornent = 2.0;
+    voronoi_f1_2d(uv,expornent,randomness,MetricMode,dist,col,pos);
+    return dist * vec3(1.0);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 { 
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     vec3 col = vec3(0.0);
-    col = texture_2D(uv); 
+    col = texture_2D(uv * 10.); 
     fragColor = vec4(col,0.0);
 }
