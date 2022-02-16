@@ -69,7 +69,8 @@ vec3 Hash_3D_to_3D(vec3 k){
 //----------------------------------------
 
 //----------------------------------------
-//Function of Distance
+//Distance Metric
+
 //refer to https://qiita.com/7CIT/items/4126d23ffb1b28b80f27
 //Euclidean Distance
 #define Euclidean(p) length(p)
@@ -91,8 +92,10 @@ float Minkowski4D(vec4 k,float p){vec4 k1 = pow(abs(k),vec4(p));return pow(dot(k
 
 //----------------------------------------
 //Voronoi 
-//refer to Blender sourcecode 
-//
+
+//reference 
+//Blender sourcecode https://github.com/blender/blender/blob/594f47ecd2d5367ca936cf6fc6ec8168c2b360d0/intern/cycles/kernel/svm/svm_voronoi.h
+//Blender document 
 vec3 texture_2D(vec2 uv){
     return Hash_2D_to_1D(uv) * vec3(1.0);
 }
