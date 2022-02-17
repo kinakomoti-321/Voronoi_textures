@@ -273,7 +273,133 @@ void voronoi_f2_2d(vec2 coord,float expornent,float randomness,int MetricMode,in
     outPosition = positionF2 + cellPosition;
 }
 
-//Edge
+//Distance to Edge
+//refer to https://www.iquilezles.org/www/articles/voronoilines/voronoilines.htm
+void voronoi_distance_to_edge_2d(vec2 coord,float randomness,inout float outDistance) {
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+    //距離はユークリッド距離のみを考える（エッジの計算をベクトル演算で行うため、他の距離でやれるかは不明） 
+    //F1を調べる 
+    float minDistance = 8.0f;
+    vec2 pointF1 = vec2(0.0);
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            vec2 cellOffset = vec2(i,j);
+            //localPositionで引いて、coordのローカル座標として考える（内積の計算を単純にするため）
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness - localPosition;
+
+            //sqrtは重いのでdotで判定             
+            float distanceToPoint = dot(pointPosition,pointPosition);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                pointF1 = pointPosition;
+            }
+        }
+    }
+
+    //F1が作るエッジで最も近いエッジの距離を探索する
+    minDistance = 8.0;
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness - localPosition;
+            vec2 perpendicularToEdge = pointPosition - pointF1;
+            //F1とF1自身での計算は除外する
+            if(dot(perpendicularToEdge,perpendicularToEdge) > 0.001){
+                //F1と今考えている点Pが作るエッジは線分F1,Pの二等分線、なのでその二等分線からの距離を求めればよい
+                //内積で求められる リファレンス参照
+                float distanceToEdge = dot((pointF1 + pointPosition) / 2.0 , normalize(perpendicularToEdge));
+                minDistance = min(minDistance,distanceToEdge);
+            }
+        }
+    }
+    outDistance = minDistance;
+}
+
+//smooth F1
+void voronoi_smooth_f1_2d(vec2 coord,float smoothness,float exponent,float randomness,int MetricMode,inout float outDistance,inout vec3 outColor,inout vec2 outPosition){
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+
+    float smoothDistance = 8.0f;
+    vec3 smoothColor = vec3(0.0);
+    vec2 smoothPosition = vec2(0.0);
+    //探索範囲が５＊５なのはsmoothnessが大きいと他のセルの影響が大きくなり３＊３だと不十分なため
+    for(int j = -2; j <=2; j++){
+        for(int i = -2; i <=2; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+
+            float distanceToPoint = voronoi_distance_2d(pointPosition,localPosition,MetricMode,exponent);
+            
+            //Polynomial Smooth minimum
+            //https://wiki.blender.org/wiki/User:OmarSquircleArt/GSoC2019/Documentation/Smooth_Voronoi
+            float h = smoothstep(0.0f,1.0f,0.5f + 0.5f * (smoothDistance - distanceToPoint) / smoothness);
+            float correctionFactor = smoothness * h * (1.0 - h);
+            smoothDistance = mix(smoothDistance,distanceToPoint,h) - correctionFactor;
+
+            //上のスムーズをそのままカラーやポジションに掛けるとぼかしが弱いためにcorrectionFactorに変化を付けている？
+            correctionFactor /= 1.0f + 3.0f * smoothness;
+            vec3 cellColor = Hash_2D_to_3D(cellPosition + cellOffset);
+            smoothColor = mix(smoothColor,cellColor,h) - correctionFactor;
+            smoothPosition = mix(smoothPosition,pointPosition,h) - correctionFactor;
+        }
+    }
+    outDistance = smoothDistance;
+    outPosition = cellPosition + smoothPosition;
+    outColor = smoothColor;
+}
+
+// sphere_radius
+void voronoi_n_sphere_radius_2d(vec2 coord,float randomness,inout float outDistance) {
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+
+    vec2 closestPoint = vec2(0.0);
+    vec2 closestPointOffset = vec2(0.0);
+    float minDistance = 8.0;
+    //F1を探索
+    for(int j = -1; j <=1; j++){
+        for(int i = -1; i <= 1; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = length(pointPosition - localPosition);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                closestPoint = pointPosition;
+                closestPointOffset = cellOffset;
+            }
+        }
+    }
+
+    //F1に最も近い点を探索、F1の周囲３＊３であることに注意
+    minDistance = 8.0;
+    vec2 closestPointToClosestPoint = vec2(0.0);
+    for(int j = -1; j <=1; j++){
+        for(int i = -1; i <= 1; i++){
+            //自分自身との判定は無視
+            if(i == 0 && j == 0){
+                continue;
+            }
+            //OffsetがF1分ずれていることに注意
+            vec2 cellOffset = vec2(i,j) + closestPointOffset;
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = length(closestPoint - pointPosition);
+
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                closestPointToClosestPoint = pointPosition;
+            }
+        }
+    }
+
+    //F1とそれに最も近い点の距離を半分にした値が内接円の半径となる
+    outDistance = length(closestPointToClosestPoint - closestPoint) * 0.5;
+}
+
+//----
+//3D Voronoi
+//----
 
 //----------------------------------------
 //Main Function
@@ -284,14 +410,21 @@ vec3 texture_2D(vec2 uv){
     float randomness = 1.0;
     int MetricMode = EUCLIDEAN;
     float expornent =0.3;
-    voronoi_f2_2d(uv,expornent,randomness,MetricMode,dist,col,pos);
-    return dist * vec3(1);
+    float smoothness = 0.2;
+    // voronoi_n_sphere_radius_2d(uv,randomness,dist);
+    voronoi_smooth_f1_2d(uv,smoothness,expornent,randomness,MetricMode,dist,col,pos);
+    // float dist1;
+    // voronoi_f1_2d(uv,expornent,randomness,MetricMode,dist1,col,pos);
+    // float dist2;
+    // voronoi_distance_to_edge_2d(uv,randomness,dist2);
+    return vec3(pos * 0.1,0.0);
+    // return dist * vec3(1.0);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 { 
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     vec3 col = vec3(0.0);
-    col = texture_2D(uv * 10.0); 
+    col = texture_2D(uv * 5.0); 
     fragColor = vec4(col,0.0);
 }
