@@ -528,27 +528,76 @@ void voronoi_n_sphere_radius_2d(vec2 coord,float randomness,inout float outDista
 //3D Voronoi
 //----
 
+float voronoi_distance_3d(vec3 a,vec3 b,int MetricMode,float expornent){
+    if(MetricMode == EUCLIDEAN){
+        return Euclidean(b - a);
+    }
+    else if(MetricMode == MANHATTAN){
+        return Manhattan3D(b - a);
+    }
+    else if(MetricMode == CHECYSHEV){
+        return Checyshev3D(b - a);
+    }
+    else if(MetricMode == MINKOWSKI){
+        return Minkowski3D(b-a,expornent);
+    }
+    else{
+        return 0.0;
+    }
+}
+
+
+//F1
+void voronoi_f1_3d(vec3 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec3 outPosition) {
+    vec3 cellPosition = floor(coord);
+    vec3 localPosition = coord - cellPosition;
+    
+    float minDistance = 8.0f;
+    vec3 targetOffset = vec3(0);
+    vec3 targetPosition = vec3(0);    
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            for(int k = -1; k<=1; k++){
+            vec3 cellOffset = vec3(i,j,k);
+            vec3 pointPosition = cellOffset + Hash_3D_to_3D(cellPosition + cellOffset) * randomness;
+            
+            float distanceToPoint = voronoi_distance_3d(pointPosition,localPosition,MetricMode,expornent);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                targetOffset = cellOffset;
+                targetPosition = pointPosition;
+            }
+            }
+        }
+    }
+
+    outDistace = minDistance;
+    outColor = Hash_3D_to_3D(cellPosition + targetOffset);
+    outPosition = targetPosition + cellPosition;
+}
+
 
 //----------------------------------------
 //Main Function
 vec3 texture_2D(vec2 uv){
     float dist;
     vec3 col;
-    float pos;
+    vec3 pos;
     float randomness = 1.0;
     int MetricMode = EUCLIDEAN;
     float expornent =0.3;
     float smoothness = 0.0;
 
-    float dist2;
-    voronoi_smooth_f1_1d(uv.x,smoothness,expornent,randomness,MetricMode,dist,col,pos);
-    voronoi_n_sphere_radius_1d(uv.x,randomness,dist2);
-    return vec3(float(dist > dist2));
+    // float dist2;
+    // voronoi_smooth_f1_1d(uv.x,smoothness,expornent,randomness,MetricMode,dist,col,pos);
+    // voronoi_n_sphere_radius_1d(uv.x,randomness,dist2);
+    // return vec3(float(dist > dist2));
 
     // voronoi_n_sphere_radius_2d(uv,randomness,dist);
     // voronoi_smooth_f1_2d(uv,smoothness,expornent,randomness,MetricMode,dist,col,pos);
-    // float dist1;
-    // voronoi_f1_2d(uv,expornent,randomness,MetricMode,dist1,col,pos);
+    float dist1;
+    voronoi_f1_3d(vec3(uv,iTime),expornent,randomness,MetricMode,dist1,col,pos);
+    return vec3(mod(pos * 0.1,1.0));
     // float dist2;
     // voronoi_distance_to_edge_2d(uv,randomness,dist2);
     // return vec3(pos * 0.1,0.0);
