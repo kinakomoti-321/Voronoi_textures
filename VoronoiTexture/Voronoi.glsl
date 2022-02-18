@@ -66,6 +66,25 @@ vec3 Hash_3D_to_3D(vec3 k){
     vec3 st = vec3(dot(k,vec3(103,393,293)),dot(k,vec3(593,339,299)),dot(k,vec3(523,334,192)));
     return vec3(fract(sin(st) * 2304.2002));
 }
+
+float Hash_4D_to_1D(vec4 k){
+    float st = dot(k,vec4(103,393,293,234));
+    return fract(sin(st) * 20042.93);
+}
+
+vec2 Hash_4D_to_2D(vec4 k){
+    vec2 st = vec2(dot(k,vec4(103,393,293,234)),dot(k,vec4(593,339,299,120)) );
+    return vec2(fract(sin(st) * 23942.392));
+}
+
+vec3 Hash_4D_to_3D(vec4 k){
+    vec3 st = vec3(dot(k,vec4(103,393,293,234)),dot(k,vec4(593,339,299,120)),dot(k,vec4(523,334,192,203)));
+    return vec3(fract(sin(st) * 20423.12));
+}
+vec4 Hash_4D_to_4D(vec4 k){
+    vec4 st = vec4(dot(k,vec4(103,393,293,234)),dot(k,vec4(593,339,299,120)),dot(k,vec4(523,334,192,203)),dot(k,vec4(293,391,363,103)));
+    return vec4(fract(sin(st) * 2344.022));
+}
 //----------------------------------------
 
 //----------------------------------------
@@ -581,7 +600,6 @@ void voronoi_f2_3d(vec3 coord,float expornent,float randomness,int MetricMode,in
     vec3 cellPosition = floor(coord);
     vec3 localPosition = coord - cellPosition;
 
-//最も近い点(F1)と二番目に近い点(F2)それぞれ判定用に用意する 
     float distF1 = 8.0f;
     float distF2 = 8.0f;
 
@@ -597,19 +615,15 @@ void voronoi_f2_3d(vec3 coord,float expornent,float randomness,int MetricMode,in
             vec3 pointPosition = cellOffset + Hash_3D_to_3D(cellPosition + cellOffset) * randomness;
             float distanceToPoint = voronoi_distance_3d(pointPosition,localPosition,MetricMode,expornent);
             
-            //最近点を発見した場合
             if(distanceToPoint < distF1){
-                //F1に格納される点はF2に移す
                 distF2 = distF1;
                 positionF2 = positionF1;
                 offsetF2 = offsetF1;
 
-                //F1の更新
                 distF1 = distanceToPoint;
                 positionF1 = pointPosition;
                 offsetF1 = cellOffset;
             }
-            //二番目に近い点を発見した場合
             else if(distanceToPoint < distF2){
                 distF2 = distanceToPoint;
                 positionF2 = pointPosition;
@@ -671,7 +685,6 @@ void voronoi_smooth_f1_3d(vec3 coord,float smoothness,float exponent,float rando
     float smoothDistance = 8.0f;
     vec3 smoothColor = vec3(0.0);
     vec3 smoothPosition = vec3(0.0);
-    //探索範囲が５＊５なのはsmoothnessが大きいと他のセルの影響が大きくなり３＊３だと不十分なため
     for(int j = -2; j <=2; j++){
         for(int i = -2; i <=2; i++){
             for(int k = -2; k<=2; k++){
@@ -680,13 +693,10 @@ void voronoi_smooth_f1_3d(vec3 coord,float smoothness,float exponent,float rando
 
             float distanceToPoint = voronoi_distance_3d(pointPosition,localPosition,MetricMode,exponent);
             
-            //Polynomial Smooth minimum
-            //https://wiki.blender.org/wiki/User:OmarSquircleArt/GSoC2019/Documentation/Smooth_Voronoi
             float h = smoothstep(0.0f,1.0f,0.5f + 0.5f * (smoothDistance - distanceToPoint) / smoothness);
             float correctionFactor = smoothness * h * (1.0 - h);
             smoothDistance = mix(smoothDistance,distanceToPoint,h) - correctionFactor;
 
-            //上のスムーズをそのままカラーやポジションに掛けるとぼかしが弱いためにcorrectionFactorに変化を付けている？
             correctionFactor /= 1.0f + 3.0f * smoothness;
             vec3 cellColor = Hash_3D_to_3D(cellPosition + cellOffset);
             smoothColor = mix(smoothColor,cellColor,h) - correctionFactor;
@@ -707,7 +717,7 @@ void voronoi_n_sphere_radius_3d(vec3 coord,float randomness,inout float outDista
     vec3 closestPoint = vec3(0.0);
     vec3 closestPointOffset = vec3(0.0);
     float minDistance = 8.0;
-    //F1を探索
+
     for(int j = -1; j <=1; j++){
         for(int i = -1; i <= 1; i++){
             for(int k = -1; k <= 1; k++){
@@ -723,18 +733,15 @@ void voronoi_n_sphere_radius_3d(vec3 coord,float randomness,inout float outDista
         }
     }
 
-    //F1に最も近い点を探索、F1の周囲３＊３であることに注意
     minDistance = 8.0;
     vec3 closestPointToClosestPoint = vec3(0.0);
 
     for(int j = -1; j <=1; j++){
         for(int i = -1; i <= 1; i++){
             for(int k = -1; k <= 1; k++){
-            //自分自身との判定は無視
             if(i == 0 && j == 0 && k == 0){
                 continue;
             }
-            //OffsetがF1分ずれていることに注意
             vec3 cellOffset = vec3(i,j,k) + closestPointOffset;
             vec3 pointPosition = cellOffset + Hash_3D_to_3D(cellPosition + cellOffset) * randomness;
             float distanceToPoint = length(closestPoint - pointPosition);
@@ -747,7 +754,6 @@ void voronoi_n_sphere_radius_3d(vec3 coord,float randomness,inout float outDista
         }
     }
 
-    //F1とそれに最も近い点の距離を半分にした値が内接円の半径となる
     outDistance = length(closestPointToClosestPoint - closestPoint) * 0.5;
 }
 
@@ -755,22 +761,248 @@ void voronoi_n_sphere_radius_3d(vec3 coord,float randomness,inout float outDista
 //4D Voronoi
 //----
 
+float voronoi_distance_4d(vec4 a,vec4 b,int MetricMode,float expornent){
+    if(MetricMode == EUCLIDEAN){
+        return Euclidean(b - a);
+    }
+    else if(MetricMode == MANHATTAN){
+        return Manhattan4D(b - a);
+    }
+    else if(MetricMode == CHECYSHEV){
+        return Checyshev4D(b - a);
+    }
+    else if(MetricMode == MINKOWSKI){
+        return Minkowski4D(b-a,expornent);
+    }
+    else{
+        return 0.0;
+    }
+}
+
+
+//F1
+void voronoi_f1_4d(vec4 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec4 outPosition) {
+    vec4 cellPosition = floor(coord);
+    vec4 localPosition = coord - cellPosition;
+    
+    float minDistance = 8.0f;
+    vec4 targetOffset = vec4(0);
+    vec4 targetPosition = vec4(0);    
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            for(int k = -1; k<=1; k++){
+                for(int w = -1; w <= 1; w++){
+            vec4 cellOffset = vec4(i,j,k,w);
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = voronoi_distance_4d(pointPosition,localPosition,MetricMode,expornent);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                targetOffset = cellOffset;
+                targetPosition = pointPosition;
+            }
+                }
+            }
+        }
+    }
+
+    outDistace = minDistance;
+    outColor = Hash_4D_to_3D(cellPosition + targetOffset);
+    outPosition = targetPosition + cellPosition;
+}
+
+//F2
+void voronoi_f2_3d(vec4 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec4 outPosition) {
+    vec4 cellPosition = floor(coord);
+    vec4 localPosition = coord - cellPosition;
+
+//最も近い点(F1)と二番目に近い点(F2)それぞれ判定用に用意する 
+    float distF1 = 8.0f;
+    float distF2 = 8.0f;
+
+    vec4 offsetF1 = vec4(0);
+    vec4 offsetF2 = vec4(0);
+    vec4 positionF1 = vec4(0);
+    vec4 positionF2 = vec4(0);
+
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            for(int k = -1; k <=1; k++){
+                for(int w = -1; w <= 1; w++){
+            vec4 cellOffset = vec4(i,j,k,w);
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = voronoi_distance_4d(pointPosition,localPosition,MetricMode,expornent);
+            
+            //最近点を発見した場合
+            if(distanceToPoint < distF1){
+                //F1に格納される点はF2に移す
+                distF2 = distF1;
+                positionF2 = positionF1;
+                offsetF2 = offsetF1;
+
+                //F1の更新
+                distF1 = distanceToPoint;
+                positionF1 = pointPosition;
+                offsetF1 = cellOffset;
+            }
+            //二番目に近い点を発見した場合
+            else if(distanceToPoint < distF2){
+                distF2 = distanceToPoint;
+                positionF2 = pointPosition;
+                offsetF2 = cellOffset; 
+            }
+                }
+            }
+        }
+    }
+
+    outDistace = distF2;
+    outColor = Hash_4D_to_3D(cellPosition + offsetF2);
+    outPosition = positionF2 + cellPosition;
+}
+
+//distance edge
+void voronoi_distance_to_edge_4d(vec4 coord,float randomness,inout float outDistance) {
+    vec4 cellPosition = floor(coord);
+    vec4 localPosition = coord - cellPosition;
+
+    float minDistance = 8.0f;
+    vec4 pointF1 = vec4(0.0);
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            for(int k = -1; k <=1; k++){
+                for(int w = -1; w <= 1; w++){
+            vec4 cellOffset = vec4(i,j,k,w);
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness - localPosition;
+
+            float distanceToPoint = dot(pointPosition,pointPosition);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                pointF1 = pointPosition;
+            }
+                }
+            }
+        }
+    }
+
+    minDistance = 8.0;
+    for(int j = -1; j <= 1; j++){
+        for(int i = -1; i<=1; i++){
+            for(int k = -1; k <=1;k++){
+                for(int w = -1; w <= 1; w++){
+            vec4 cellOffset = vec4(i,j,k,w);
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness - localPosition;
+            vec4 perpendicularToEdge = pointPosition - pointF1;
+            if(dot(perpendicularToEdge,perpendicularToEdge) > 0.001){
+                float distanceToEdge = dot((pointF1 + pointPosition) / 2.0 , normalize(perpendicularToEdge));
+                minDistance = min(minDistance,distanceToEdge);
+            }
+                }
+            }
+        }
+    }
+    outDistance = minDistance;
+}
+
+//smooth f1
+void voronoi_smooth_f1_4d(vec4 coord,float smoothness,float exponent,float randomness,int MetricMode,inout float outDistance,inout vec3 outColor,inout vec4 outPosition){
+    vec4 cellPosition = floor(coord);
+    vec4 localPosition = coord - cellPosition;
+
+    float smoothDistance = 8.0f;
+    vec3 smoothColor = vec3(0.0);
+    vec4 smoothPosition = vec4(0.0);
+    for(int j = -2; j <=2; j++){
+        for(int i = -2; i <=2; i++){
+            for(int k = -2; k<=2; k++){
+                for(int w = -2; w <= 2; w++){
+            vec4 cellOffset = vec4(i,j,k,w);
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness;
+
+            float distanceToPoint = voronoi_distance_4d(pointPosition,localPosition,MetricMode,exponent);
+            
+            float h = smoothstep(0.0f,1.0f,0.5f + 0.5f * (smoothDistance - distanceToPoint) / smoothness);
+            float correctionFactor = smoothness * h * (1.0 - h);
+            smoothDistance = mix(smoothDistance,distanceToPoint,h) - correctionFactor;
+
+            correctionFactor /= 1.0f + 3.0f * smoothness;
+            vec3 cellColor = Hash_4D_to_3D(cellPosition + cellOffset);
+            smoothColor = mix(smoothColor,cellColor,h) - correctionFactor;
+            smoothPosition = mix(smoothPosition,pointPosition,h) - correctionFactor;
+            }
+            }
+        }
+    }
+    outDistance = smoothDistance;
+    outPosition = cellPosition + smoothPosition;
+    outColor = smoothColor;
+}
+
+void voronoi_n_sphere_radius_4d(vec4 coord,float randomness,inout float outDistance) {
+    vec4 cellPosition = floor(coord);
+    vec4 localPosition = coord - cellPosition;
+
+    vec4 closestPoint = vec4(0.0);
+    vec4 closestPointOffset = vec4(0.0);
+    float minDistance = 8.0;
+    //F1を探索
+    for(int j = -1; j <=1; j++){
+        for(int i = -1; i <= 1; i++){
+            for(int k = -1; k <= 1; k++){
+                for(int w = -1; w <= 1; w++){
+            vec4 cellOffset = vec4(i,j,k,w);
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = length(pointPosition - localPosition);
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                closestPoint = pointPosition;
+                closestPointOffset = cellOffset;
+            }
+                }
+            }
+        }
+    }
+
+    minDistance = 8.0;
+    vec4 closestPointToClosestPoint = vec4(0.0);
+
+    for(int j = -1; j <=1; j++){
+        for(int i = -1; i <= 1; i++){
+            for(int k = -1; k <= 1; k++){
+                for(int w = -1; w <= 1; w++){
+            if(i == 0 && j == 0 && k == 0 && w == 0){
+                continue;
+            }
+            vec4 cellOffset = vec4(i,j,k,w) + closestPointOffset;
+            vec4 pointPosition = cellOffset + Hash_4D_to_4D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = length(closestPoint - pointPosition);
+
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                closestPointToClosestPoint = pointPosition;
+            }
+                }
+            }
+        }
+    }
+
+    outDistance = length(closestPointToClosestPoint - closestPoint) * 0.5;
+}
+
 
 //----------------------------------------
 //Main Function
 vec3 texture_2D(vec2 uv){
     float dist;
     vec3 col;
-    vec3 pos;
+    vec4 pos;
     float randomness = 1.0;
     int MetricMode = EUCLIDEAN;
     float expornent =0.3;
     float smoothness = 0.1;
 
     float dist1;
-    voronoi_smooth_f1_3d(vec3(uv,iTime),smoothness,expornent,randomness,MetricMode,dist1,col,pos);
-    voronoi_n_sphere_radius_3d(vec3(uv,iTime),randomness,dist);
-    return vec3(float(dist > dist1)) + vec3(dist1 * dist1 * dist1);
+    voronoi_smooth_f1_4d(vec4(uv.xy,iTime,0.0),smoothness,expornent,randomness,MetricMode,dist1,col,pos);
+    return vec3(dist1);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
