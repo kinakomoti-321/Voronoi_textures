@@ -990,24 +990,94 @@ void voronoi_n_sphere_radius_4d(vec4 coord,float randomness,inout float outDista
 
 //----------------------------------------
 //Main Function
-vec3 texture_2D(vec2 uv){
-    float dist;
-    vec3 col;
-    vec4 pos;
-    float randomness = 1.0;
-    int MetricMode = EUCLIDEAN;
-    float expornent =0.3;
-    float smoothness = 0.1;
+#define RAY_ITERATION 100
+#define MAX_DEPTH 1000.0
+#define LIGHT normalize(vec3(1))
+struct Ray{
+    vec3 origin;
+    vec3 direction;
+};
+struct IntersectInfo{
+    vec3 pos;
+    vec3 normal;
+    float dis;
+    vec3 diffuse;
+    bool hit;
+};
 
-    float dist1;
-    voronoi_smooth_f1_4d(vec4(uv.xy,iTime,0.0),smoothness,expornent,randomness,MetricMode,dist1,col,pos);
-    return vec3(dist1);
+float sd_sphere(vec3 p){
+    return length(p) - 4.0f;
+}
+
+float map(vec3 p){
+    float d = 5.0;
+    float randomness = 1.0;
+    float r = 0.02; 
+
+    if(length(p) < 5.0){
+        voronoi_distance_to_edge_4d(vec4(p,iTime),randomness,d);
+        d -= 0.02;
+    }
+
+    return d;
+}
+vec3 getNormal(vec3 p){
+    float epsiron = 0.001;
+    return normalize(vec3(
+        map(p) - map(p - vec3(epsiron,0,0)),
+        map(p) - map(p - vec3(0,epsiron,0)),
+        map(p) - map(p - vec3(0,0,epsiron))   
+    ));
+}
+
+IntersectInfo rayMarching(Ray ray){
+    IntersectInfo info;
+    info.hit = false;
+    info.dis = MAX_DEPTH;
+    float d = 0.0;
+    float totald = 0.0;
+    for(int i = 0; i < RAY_ITERATION; i++){
+        d = map(ray.origin + totald * ray.direction);
+        if(d < 0.001){
+            info.dis = totald;
+            info.pos = ray.origin + ray.direction * totald;
+            info.normal = getNormal(info.pos);
+            info.hit = true;
+            return info;
+        };
+        totald += d;
+    }
+    return info;
+
+}
+
+vec3 sceneColor(Ray ray){
+    IntersectInfo info = rayMarching(ray);
+    vec3 scenecolor = vec3(0.0);
+    if(info.hit){
+        return vec3(1.0) * dot(info.normal,LIGHT);
+    }
+    return scenecolor;
+}
+
+vec3 cameraRayDireciton(vec3 cameraDir,vec2 uv,float dis){
+    //return direction from cameraPos to imagePos
+    vec3 direction;
+    vec3 cameraSide = cross(cameraDir,(abs(cameraDir.y) < 0.99) ? vec3(0,1,0):vec3(1,0,0));
+    vec3 cameraUp = cross(cameraSide,cameraDir);
+    direction = normalize(uv.x * cameraSide + uv.y * cameraUp + dis * cameraDir);
+    return direction;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 { 
     vec2 uv = (fragCoord * 2.0 - iResolution.xy) / iResolution.y;
     vec3 col = vec3(0.0);
-    col = texture_2D(uv * 5.0); 
+    vec3 cameraPos = vec3(10.0,0,10.0);
+    vec3 cameraDir = normalize(-cameraPos);
+    Ray ray;
+    ray.origin = cameraPos;
+    ray.direction = cameraRayDireciton(cameraDir,uv,1.0);
+    col = sceneColor(ray);
     fragColor = vec4(col,0.0);
 }
