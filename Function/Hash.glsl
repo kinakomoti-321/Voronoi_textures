@@ -61,6 +61,26 @@ vec3 Hash_3D_to_3D(vec3 k){
     return vec3(fract(sin(st) * 2304.2002));
 }
 
+float Hash_4D_to_1D(vec4 k){
+    float st = dot(k,vec4(103,393,293,234));
+    return fract(sin(st) * 20042.93);
+}
+
+vec2 Hash_4D_to_2D(vec4 k){
+    vec2 st = vec2(dot(k,vec4(103,393,293,234)),dot(k,vec4(593,339,299,120)) );
+    return vec2(fract(sin(st) * 23942.392));
+}
+
+vec3 Hash_4D_to_3D(vec4 k){
+    vec3 st = vec3(dot(k,vec4(103,393,293,234)),dot(k,vec4(593,339,299,120)),dot(k,vec4(523,334,192,203)));
+    return vec3(fract(sin(st) * 20423.12));
+}
+vec4 Hash_4D_to_4D(vec4 k){
+    vec4 st = vec4(dot(k,vec4(103,393,293,234)),dot(k,vec4(593,339,299,120)),dot(k,vec4(523,334,192,203)),dot(k,vec4(293,391,363,103)));
+    return vec4(fract(sin(st) * 2344.022));
+}
+
+
 vec3 texture_2D(vec2 uv){
     return Hash_2D_to_1D(uv) * vec3(1.0);
 }
