@@ -3,12 +3,11 @@ GLSL_VoronoiTexture
 
 The Voronoi texture in this source code is a GLSL rewrite of Blender's "sbm_voronoi.h".
     
+[Blender / svm_voronoi.h](https://github.com/blender/blender/blob/594f47ecd2d5367ca936cf6fc6ec8168c2b360d0/intern/cycles/kernel/svm/svm_voronoi.h) 
+
 This GLSL code is designed to be run on ShaderToy. However, because voronoi program and Hash, Distance Metric use only general GLSL function, These programs can be worked in environments other than ShaderToy.
 
 If you want Voronoi.glsl to work, you need to copy and paste it to code editor in ShaderToy, or install ShaderToy VScode extension and run it in VScode.
-
-
-[Blender / svm_voronoi.h](https://github.com/blender/blender/blob/594f47ecd2d5367ca936cf6fc6ec8168c2b360d0/intern/cycles/kernel/svm/svm_voronoi.h) 
 
 # Gallery
 #### F1
