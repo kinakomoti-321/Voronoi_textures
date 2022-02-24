@@ -499,7 +499,7 @@ void voronoi_smooth_f1_2d(vec2 coord,float smoothness,float exponent,float rando
             float correctionFactor = smoothness * h * (1.0 - h);
             smoothDistance = mix(smoothDistance,distanceToPoint,h) - correctionFactor;
 
-            //上のスムーズをそのままカラーやポジションに掛けるとぼかしが弱いためにcorrectionFactorに変化を付けている？
+            //上のスムーズをそのままカラーやポジションに掛けるとぼかしが強いためにcorrectionFactorに変化を付けている？
             correctionFactor /= 1.0f + 3.0f * smoothness;
             vec3 cellColor = Hash_2D_to_3D(cellPosition + cellOffset);
             smoothColor = mix(smoothColor,cellColor,h) - correctionFactor;
@@ -1009,15 +1009,14 @@ void voronoi_n_sphere_radius_4d(vec4 coord,float randomness,inout float outDista
 vec3 texture_2D(vec2 uv){
     float dist;
     vec3 col;
-    vec4 pos;
+    vec2 pos;
     float randomness = 1.0;
     int MetricMode = EUCLIDEAN;
     float expornent =0.3;
     float smoothness = 0.1;
+    voronoi_f1_2d(uv,expornent,randomness,MetricMode,dist,col,pos);
 
-    float dist1;
-    voronoi_smooth_f1_4d(vec4(uv.xy,iTime,0.0),smoothness,expornent,randomness,MetricMode,dist1,col,pos);
-    return vec3(dist1);
+    return vec3(dist);
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
