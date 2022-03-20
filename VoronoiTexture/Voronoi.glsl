@@ -1003,7 +1003,26 @@ void voronoi_n_sphere_radius_4d(vec4 coord,float randomness,inout float outDista
     outDistance = length(closestPointToClosestPoint - closestPoint) * 0.5;
 }
 
+//----------------------------------------
+//Crackle
+//----------------------------------------
 
+//Refference
+//https://github.com/blender/blender/blob/594f47ecd2d5367ca936cf6fc6ec8168c2b360d0/source/blender/blenlib/intern/noise.c
+
+float voronoi_Crackle_2d(vec2 uv,int MetricMode,float exponent,float randomness,float scale){
+    float F1;
+    float F2;
+    vec3 col;
+    vec2 pos;
+    voronoi_f1_2d(uv,exponent,randomness,MetricMode,F1,col,pos);
+    voronoi_f2_2d(uv,exponent,randomness,MetricMode,F2,col,pos);
+
+    return clamp((F2 - F1)*scale,0.0,1.0);
+    
+}
+
+//
 //----------------------------------------
 //Main Function
 vec3 texture_2D(vec2 uv){
@@ -1011,10 +1030,11 @@ vec3 texture_2D(vec2 uv){
     vec3 col;
     vec2 pos;
     float randomness = 1.0;
-    int MetricMode = EUCLIDEAN;
-    float expornent =0.3;
+    int MetricMode = CHECYSHEV;
+    float exponent =0.3;
     float smoothness = 0.1;
-    voronoi_f1_2d(uv,expornent,randomness,MetricMode,dist,col,pos);
+
+    dist = voronoi_Crackle_2d(uv,MetricMode,exponent,randomness,1.0);    
 
     return vec3(dist);
 }
