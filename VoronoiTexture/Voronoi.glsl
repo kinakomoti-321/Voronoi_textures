@@ -1019,9 +1019,90 @@ float voronoi_Crackle_2d(vec2 uv,int MetricMode,float exponent,float randomness,
     voronoi_f2_2d(uv,exponent,randomness,MetricMode,F2,col,pos);
 
     return clamp((F2 - F1)*scale,0.0,1.0);
-    
 }
 
+//----------------------------------------
+//Weight Voronoi
+//----------------------------------------
+
+void voronoi_weight_f1_2d(vec2 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec2 outPosition,float weight) {
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+    
+    float minDistance = 8.0f;
+    vec2 targetOffset = vec2(0);
+    vec2 targetPosition = vec2(0);    
+    for(int j = -2; j <= 2; j++){
+        for(int i = -2; i<=2; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+            
+            float distanceToPoint = voronoi_distance_2d(pointPosition,localPosition,MetricMode,expornent) - Hash_2D_to_1D(cellPosition + cellOffset) * weight;
+            if(distanceToPoint < minDistance){
+                minDistance = distanceToPoint;
+                targetOffset = cellOffset;
+                targetPosition = pointPosition;
+            }
+        }
+    }
+
+    outDistace = minDistance;
+    outColor = Hash_2D_to_3D(cellPosition + targetOffset);
+    outPosition = targetPosition + cellPosition;
+}
+
+//F2 
+void voronoi_weight_f2_2d(vec2 coord,float expornent,float randomness,int MetricMode,inout float outDistace,inout vec3 outColor,inout vec2 outPosition,float weight) {
+    vec2 cellPosition = floor(coord);
+    vec2 localPosition = coord - cellPosition;
+
+    float distF1 = 8.0f;
+    float distF2 = 8.0f;
+
+    vec2 offsetF1 = vec2(0);
+    vec2 offsetF2 = vec2(0);
+    vec2 positionF1 = vec2(0);
+    vec2 positionF2 = vec2(0);
+
+    for(int j = -2; j <= 2; j++){
+        for(int i = -2; i<=2; i++){
+            vec2 cellOffset = vec2(i,j);
+            vec2 pointPosition = cellOffset + Hash_2D_to_2D(cellPosition + cellOffset) * randomness;
+            float distanceToPoint = voronoi_distance_2d(pointPosition,localPosition,MetricMode,expornent) - Hash_2D_to_1D(cellPosition + cellOffset) * weight;
+            
+            if(distanceToPoint < distF1){
+                distF2 = distF1;
+                positionF2 = positionF1;
+                offsetF2 = offsetF1;
+
+                distF1 = distanceToPoint;
+                positionF1 = pointPosition;
+                offsetF1 = cellOffset;
+            }
+            //二番目に近い点を発見した場合
+            else if(distanceToPoint < distF2){
+                distF2 = distanceToPoint;
+                positionF2 = pointPosition;
+                offsetF2 = cellOffset; 
+            }
+        }
+    }
+
+    outDistace = distF2;
+    outColor = Hash_2D_to_3D(cellPosition + offsetF2);
+    outPosition = positionF2 + cellPosition;
+}
+
+float voronoi_weight_Crackle_2d(vec2 uv,int MetricMode,float exponent,float randomness,float scale,float weight){
+    float F1;
+    float F2;
+    vec3 col;
+    vec2 pos;
+    voronoi_weight_f1_2d(uv,exponent,randomness,MetricMode,F1,col,pos,weight);
+    voronoi_weight_f2_2d(uv,exponent,randomness,MetricMode,F2,col,pos,weight);
+
+    return clamp((F2 - F1)*scale,0.0,1.0);
+}
 //
 //----------------------------------------
 //Main Function
@@ -1030,11 +1111,11 @@ vec3 texture_2D(vec2 uv){
     vec3 col;
     vec2 pos;
     float randomness = 1.0;
-    int MetricMode = CHECYSHEV;
+    int MetricMode = EUCLIDEAN;
     float exponent =0.3;
     float smoothness = 0.1;
 
-    dist = voronoi_Crackle_2d(uv,MetricMode,exponent,randomness,1.0);    
+    dist = step(voronoi_weight_Crackle_2d(uv,MetricMode,exponent,randomness,1.0,3.0),0.05);    
 
     return vec3(dist);
 }
