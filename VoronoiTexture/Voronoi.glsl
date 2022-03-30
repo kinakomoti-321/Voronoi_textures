@@ -1115,7 +1115,7 @@ vec3 texture_2D(vec2 uv){
     float exponent =0.3;
     float smoothness = 0.1;
 
-    dist = step(voronoi_weight_Crackle_2d(uv,MetricMode,exponent,randomness,1.0,3.0),0.05);    
+    voronoi_weight_f1_2d(uv,exponent,randomness,MetricMode,dist,col,pos,0.8);
 
     return vec3(dist);
 }
